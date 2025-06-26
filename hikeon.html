@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Best Hikes in India</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: #1a1a1a; /* Dark background */
+            color: #ffffff; /* White text */
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        #sidebar {
+            width: 350px;
+            background-color: #000000; /* Black sidebar */
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            border-right: 1px solid #333333; /* Subtle border */
+            scrollbar-width: thin;
+            scrollbar-color: #555555 #333333;
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: #333333;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background-color: #555555;
+            border-radius: 4px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .hike-item {
+            margin-bottom: 15px;
+            border: 1px solid #333333;
+            border-radius: 5px;
+            overflow: hidden;
+            background-color: #1a1a1a;
+        }
+
+        .hike-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #000000;
+            color: #ffffff;
+            border-bottom: 1px solid #333333; /* Separator for header */
+        }
+
+        .hike-header h3 {
+            margin: 0;
+            font-size: 1.1em;
+            flex-grow: 1; /* Allows name to take up available space */
+        }
+
+        .hike-header .toggle-btn {
+            font-size: 1.5em;
+            line-height: 1;
+            margin-left: 10px;
+            color: #ffffff;
+        }
+
+        .hike-header .done-checkbox {
+            margin-left: 15px;
+            transform: scale(1.2); /* Make checkbox slightly larger */
+        }
+
+        .hike-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            padding: 0 15px;
+            color: #cccccc;
+        }
+
+        .hike-details p {
+            margin: 10px 0;
+            line-height: 1.4;
+        }
+
+        .hike-details.expanded {
+            max-height: 300px; /* Adjust as needed for content */
+            padding: 15px;
+        }
+
+        #map {
+            flex-grow: 1;
+            background-color: #333333; /* Darker map background */
+        }
+
+        /* Leaflet popups custom styling */
+        .leaflet-popup-content-wrapper {
+            background: #1a1a1a;
+            color: #ffffff;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: sans-serif;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .leaflet-popup-content-wrapper a {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        .leaflet-popup-tip {
+            background: #1a1a1a;
+        }
+        .leaflet-popup-content {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Best Hikes in India</h1>
+        <div id="hikes-list">
+            </div>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Hike Data
+        const hikes = [
+            {
+                name: "Kedarkantha Trek",
+                latitude: 31.0535,
+                longitude: 78.1345,
+                shortDescription: "A popular winter trek offering stunning views of snow-capped peaks and dense forests. Known for its accessible summit.",
+                additionalInfo: "Difficulty: Easy to Moderate | Length: ~20 km | Estimated Time: 4-6 days | Best Season: December to April (for snow), May-June & Sept-Oct (for clear views)"
+            },
+            {
+                name: "Hampta Pass Trek",
+                latitude: 32.2476,
+                longitude: 77.1994,
+                shortDescription: "A thrilling crossover trek connecting the lush green Kullu Valley with the stark landscapes of Lahaul.",
+                additionalInfo: "Difficulty: Moderate | Length: ~25 km | Estimated Time: 5-6 days | Best Season: June to September (especially good for monsoon)"
+            },
+            {
+                name: "Valley of Flowers Trek",
+                latitude: 30.7303,
+                longitude: 79.6200,
+                shortDescription: "A UNESCO World Heritage Site, renowned for its vibrant meadows of endemic alpine flowers and diverse fauna.",
+                additionalInfo: "Difficulty: Easy to Moderate | Length: ~38 km (including return from Govindghat) | Estimated Time: 5-7 days | Best Season: July to September (for blooming flowers)"
+            },
+            {
+                name: "Chadar Trek",
+                latitude: 34.1668,
+                longitude: 77.5772,
+                shortDescription: "A unique and challenging winter trek across the frozen Zanskar River in Ladakh.",
+                additionalInfo: "Difficulty: Difficult | Length: ~105 km | Estimated Time: 9-10 days | Best Season: January to February (when the river is frozen)"
+            },
+            {
+                name: "Roopkund Trek",
+                latitude: 30.3478,
+                longitude: 79.7420,
+                shortDescription: "Famous for the mysterious 'Skeleton Lake,' this trek takes you through stunning meadows and high-altitude landscapes.",
+                additionalInfo: "Difficulty: Moderate to Difficult | Length: ~53 km | Estimated Time: 7-8 days | Best Season: May to June, September to October"
+            },
+            {
+                name: "Kumara Parvatha Trek",
+                latitude: 12.6617,
+                longitude: 75.6864,
+                shortDescription: "One of the most challenging treks in the Western Ghats, offering diverse terrain from dense forests to grasslands.",
+                additionalInfo: "Difficulty: Moderate to Difficult | Length: ~22 km | Estimated Time: 2-3 days | Best Season: Post-monsoon (October to February) for pleasant weather, Monsoon (June-September) for lush greenery (can be slippery)"
+            },
+            {
+                name: "Nag Tibba Trek",
+                latitude: 30.5517,
+                longitude: 78.1750,
+                shortDescription: "A popular weekend trek near Mussoorie, offering panoramic views of the Himalayan ranges.",
+                additionalInfo: "Difficulty: Easy | Length: ~16 km | Estimated Time: 2 days | Best Season: All year, but best during March-April and September-November for clear views and pleasant weather. Winter for snow."
+            },
+            {
+                name: "Sandakphu Trek",
+                latitude: 27.1000,
+                longitude: 88.0000,
+                shortDescription: "Known as 'Trekkers' Wonderland,' it offers unparalleled views of four of the five highest peaks in the world – Everest, Kanchenjunga, Lhotse, and Makalu.",
+                additionalInfo: "Difficulty: Moderate | Length: ~50 km | Estimated Time: 6-7 days | Best Season: April-May and October-November (for clear mountain views)"
+            },
+            {
+                name: "Goechala Trek",
+                latitude: 27.6000,
+                longitude: 88.2333,
+                shortDescription: "A high-altitude trek in Sikkim offering spectacular views of Mt. Kanchenjunga and its surrounding peaks.",
+                additionalInfo: "Difficulty: Difficult | Length: ~90 km | Estimated Time: 10-11 days | Best Season: April-May and September-October"
+            },
+            {
+                name: "Markha Valley Trek",
+                latitude: 33.7915,
+                longitude: 77.4087,
+                shortDescription: "A diverse trek in Ladakh, passing through remote villages, ancient monasteries, and stunning high-altitude desert landscapes.",
+                additionalInfo: "Difficulty: Moderate to Difficult | Length: ~65 km | Estimated Time: 7-8 days | Best Season: Mid-May to September"
+            },
+            {
+        name: "Kedarkantha Trek",
+        latitude: 31.0535,
+        longitude: 78.1345,
+        shortDescription: "A popular winter trek offering stunning views of snow-capped peaks and dense forests. Known for its accessible summit.",
+        additionalInfo: "Difficulty: Easy to Moderate | Length: ~20 km | Estimated Time: 4-6 days | Best Season: December to April (for snow), May-June & Sept-Oct (for clear views)"
+    },
+    {
+        name: "Hampta Pass Trek",
+        latitude: 32.2476,
+        longitude: 77.1994,
+        shortDescription: "A thrilling crossover trek connecting the lush green Kullu Valley with the stark landscapes of Lahaul.",
+        additionalInfo: "Difficulty: Moderate | Length: ~25 km | Estimated Time: 5-6 days | Best Season: June to September (especially good for monsoon)"
+    },
+    {
+        name: "Valley of Flowers Trek",
+        latitude: 30.7303,
+        longitude: 79.6200,
+        shortDescription: "A UNESCO World Heritage Site, renowned for its vibrant meadows of endemic alpine flowers and diverse fauna.",
+        additionalInfo: "Difficulty: Easy to Moderate | Length: ~38 km (including return from Govindghat) | Estimated Time: 5-7 days | Best Season: July to September (for blooming flowers)"
+    },
+    {
+        name: "Chadar Trek",
+        latitude: 34.1668,
+        longitude: 77.5772,
+        shortDescription: "A unique and challenging winter trek across the frozen Zanskar River in Ladakh.",
+        additionalInfo: "Difficulty: Difficult | Length: ~105 km | Estimated Time: 9-10 days | Best Season: January to February (when the river is frozen)"
+    },
+    {
+        name: "Roopkund Trek",
+        latitude: 30.3478,
+        longitude: 79.7420,
+        shortDescription: "Famous for the mysterious 'Skeleton Lake,' this trek takes you through stunning meadows and high-altitude landscapes.",
+        additionalInfo: "Difficulty: Moderate to Difficult | Length: ~53 km | Estimated Time: 7-8 days | Best Season: May to June, September to October"
+    },
+    {
+        name: "Kumara Parvatha Trek",
+        latitude: 12.6617,
+        longitude: 75.6864,
+        shortDescription: "One of the most challenging treks in the Western Ghats, offering diverse terrain from dense forests to grasslands.",
+        additionalInfo: "Difficulty: Moderate to Difficult | Length: ~22 km | Estimated Time: 2-3 days | Best Season: Post-monsoon (October to February) for pleasant weather, Monsoon (June-September) for lush greenery (can be slippery)"
+    },
+    {
+        name: "Nag Tibba Trek",
+        latitude: 30.5517,
+        longitude: 78.1750,
+        shortDescription: "A popular weekend trek near Mussoorie, offering panoramic views of the Himalayan ranges.",
+        additionalInfo: "Difficulty: Easy | Length: ~16 km | Estimated Time: 2 days | Best Season: All year, but best during March-April and September-November for clear views and pleasant weather. Winter for snow."
+    },
+    {
+        name: "Sandakphu Trek",
+        latitude: 27.1000,
+        longitude: 88.0000,
+        shortDescription: "Known as 'Trekkers' Wonderland,' it offers unparalleled views of four of the five highest peaks in the world – Everest, Kanchenjunga, Lhotse, and Makalu.",
+        additionalInfo: "Difficulty: Moderate | Length: ~50 km | Estimated Time: 6-7 days | Best Season: April-May and October-November (for clear mountain views)"
+    },
+    {
+        name: "Goechala Trek",
+        latitude: 27.6000,
+        longitude: 88.2333,
+        shortDescription: "A high-altitude trek in Sikkim offering spectacular views of Mt. Kanchenjunga and its surrounding peaks.",
+        additionalInfo: "Difficulty: Difficult | Length: ~90 km | Estimated Time: 10-11 days | Best Season: April-May and September-October"
+    },
+    {
+        name: "Markha Valley Trek",
+        latitude: 33.7915,
+        longitude: 77.4087,
+        shortDescription: "A diverse trek in Ladakh, passing through remote villages, ancient monasteries, and stunning high-altitude desert landscapes.",
+        additionalInfo: "Difficulty: Moderate to Difficult | Length: ~65 km | Estimated Time: 7-8 days | Best Season: Mid-May to September"
+    },
+    {
+        name: "Triund Trek",
+        latitude: 32.2599,
+        longitude: 76.3470,
+        shortDescription: "A very popular and relatively easy trek near McLeodganj, offering stunning views of the Dhauladhar range.",
+        additionalInfo: "Difficulty: Easy | Length: ~9 km (one way) | Estimated Time: 1-2 days | Best Season: March-June, September-December"
+    },
+    {
+        name: "Dayara Bugyal Trek",
+        latitude: 30.8242,
+        longitude: 78.5080,
+        shortDescription: "A picturesque trek through vast green meadows (bugyals) that turn into stunning snowy landscapes in winter. Excellent for beginners.",
+        additionalInfo: "Difficulty: Easy to Moderate | Length: ~10 km | Estimated Time: 3-4 days | Best Season: May-June, September-November (for meadows), Dec-Feb (for snow)"
+    },
+    {
+        name: "Har Ki Dun Trek",
+        latitude: 30.8660,
+        longitude: 78.2930,
+        shortDescription: "Known as the 'Valley of Gods,' offering a glimpse into ancient Himalayan villages and culture.",
+        additionalInfo: "Difficulty: Moderate | Length: ~44 km | Estimated Time: 7-8 days | Best Season: April-June, September-November"
+    },
+    {
+        name: "Rupin Pass Trek",
+        latitude: 31.0667,
+        longitude: 78.4333,
+        shortDescription: "A classic crossover trek known for its diverse scenery, including waterfalls, snow bridges, and challenging climbs.",
+        additionalInfo: "Difficulty: Moderate to Difficult | Length: ~52 km | Estimated Time: 7-8 days | Best Season: May-June, September-October"
+    },
+    {
+        name: "Brahmatal Trek",
+        latitude: 30.2974,
+        longitude: 79.5292,
+        shortDescription: "A popular winter trek offering incredible views of snow-capped peaks like Mt. Trishul and Nanda Ghunti.",
+        additionalInfo: "Difficulty: Moderate | Length: ~22 km | Estimated Time: 5-6 days | Best Season: December-March (for snow), April-June, September-October"
+    },
+    {
+        name: "Kuari Pass Trek",
+        latitude: 30.4072,
+        longitude: 79.7997,
+        shortDescription: "Also known as Lord Curzon's Trail, offering breathtaking views of major Himalayan peaks.",
+        additionalInfo: "Difficulty: Easy to Moderate | Length: ~33 km | Estimated Time: 6 days | Best Season: April-June, September-November"
+    },
+    {
+        name: "Stok Kangri Trek",
+        latitude: 34.0152,
+        longitude: 77.4267,
+        shortDescription: "Once considered the highest trekkable peak in India (though recent regulations might affect summit attempts), it offers an extreme high-altitude experience.",
+        additionalInfo: "Difficulty: Difficult/Strenuous | Length: ~40 km | Estimated Time: 8-10 days | Best Season: Mid-July to Mid-September"
+    },
+    {
+        name: "Pin Parvati Pass Trek",
+        latitude: 31.9167,
+        longitude: 77.7833,
+        shortDescription: "A very challenging crossover trek connecting the Parvati Valley with the Pin Valley in Spiti.",
+        additionalInfo: "Difficulty: Difficult/Strenuous | Length: ~110 km | Estimated Time: 10-12 days | Best Season: July to September"
+    },
+    {
+        name: "Bali Pass Trek",
+        latitude: 31.0264,
+        longitude: 78.4385,
+        shortDescription: "A high-altitude pass offering a challenging adventure and connecting the Har Ki Dun valley to Yamunotri.",
+        additionalInfo: "Difficulty: Difficult | Length: ~60 km | Estimated Time: 8-9 days | Best Season: May-June, September-October"
+    },
+    {
+        name: "Tadiandamol Trek",
+        latitude: 12.1952,
+        longitude: 75.7601,
+        shortDescription: "The highest peak in Coorg, offering beautiful views of the Western Ghats.",
+        additionalInfo: "Difficulty: Easy to Moderate | Length: ~15 km (return) | Estimated Time: 1-2 days | Best Season: October to March"
+    },
+    {
+        name: "Chembra Peak Trek",
+        latitude: 11.5645,
+        longitude: 76.1089,
+        shortDescription: "Famous for its heart-shaped lake on the way to the summit.",
+        additionalInfo: "Difficulty: Easy to Moderate | Length: ~7 km (return) | Estimated Time: 1 day | Best Season: September to February"
+    },
+    {
+        name: "Meesapulimala Trek",
+        latitude: 10.0468,
+        longitude: 77.1068,
+        shortDescription: "The second highest peak in the Western Ghats of Kerala.",
+        additionalInfo: "Difficulty: Moderate to Difficult | Length: ~8 km (one way) | Estimated Time: 1-2 days | Best Season: October to March"
+    },
+    {
+        name: "Kudremukh Trek",
+        latitude: 13.1970,
+        longitude: 75.2690,
+        shortDescription: "Known for its unique horse-face shaped peak and rich biodiversity.",
+        additionalInfo: "Difficulty: Moderate | Length: ~20 km (return) | Estimated Time: 1-2 days | Best Season: October to February"
+    },
+    {
+        name: "Gokarna Beach Trek",
+        latitude: 14.5492,
+        longitude: 74.3168,
+        shortDescription: "A unique coastal trek connecting multiple pristine beaches.",
+        additionalInfo: "Difficulty: Easy | Length: Varies (can be done in sections) | Estimated Time: 1 day | Best Season: October to March"
+    },
+    {
+        name: "Dzukou Valley Trek",
+        latitude: 25.5976,
+        longitude: 94.0622,
+        shortDescription: "Famous for its stunning seasonal wildflowers and lush green rolling hills.",
+        additionalInfo: "Difficulty: Moderate | Length: ~17 km (return from base) | Estimated Time: 2-3 days | Best Season: June to September (for flowers), October to March (for cooler weather)"
+    },
+    {
+        name: "Phoktey Dara Trek",
+        latitude: 27.2000,
+        longitude: 88.0100,
+        shortDescription: "A hidden gem offering panoramic views of four of the world's highest peaks, including Everest and Kanchenjunga.",
+        additionalInfo: "Difficulty: Moderate | Length: Varies | Estimated Time: 5-7 days | Best Season: March-May, October-November"
+    }
+        ];
+
+        // Initialize the map
+        const map = L.map('map').setView([22.0, 78.0], 5); // Centered on India
+
+        // Add a tile layer (dark mode friendly, using Esri's DarkGrayCanvas)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+            maxZoom: 16
+        }).addTo(map);
+
+        const hikesList = document.getElementById('hikes-list');
+
+        // Function to load done hikes from localStorage
+        function getDoneHikes() {
+            try {
+                const doneHikesJson = localStorage.getItem('doneHikes');
+                return doneHikesJson ? JSON.parse(doneHikesJson) : {};
+            } catch (e) {
+                console.error("Error parsing doneHikes from localStorage:", e);
+                return {};
+            }
+        }
+
+        // Function to save done hikes to localStorage
+        function saveDoneHikes(doneHikes) {
+            try {
+                localStorage.setItem('doneHikes', JSON.stringify(doneHikes));
+            } catch (e) {
+                console.error("Error saving doneHikes to localStorage:", e);
+            }
+        }
+
+        const doneHikes = getDoneHikes();
+
+        hikes.forEach((hike, index) => {
+            // Create hike item container
+            const hikeItem = document.createElement('div');
+            hikeItem.classList.add('hike-item');
+
+            // Create header for click and toggle
+            const hikeHeader = document.createElement('div');
+            hikeHeader.classList.add('hike-header');
+            hikeHeader.innerHTML = `
+                <h3>${hike.name}</h3>
+                <input type="checkbox" class="done-checkbox" id="done-${index}">
+                <span class="toggle-btn">+</span>
+            `;
+            hikeItem.appendChild(hikeHeader);
+
+            // Create details section (initially hidden)
+            const hikeDetails = document.createElement('div');
+            hikeDetails.classList.add('hike-details');
+            hikeDetails.innerHTML = `
+                <p>${hike.shortDescription}</p>
+                <p><strong>${hike.additionalInfo}</strong></p>
+            `;
+            hikeItem.appendChild(hikeDetails);
+
+            hikesList.appendChild(hikeItem);
+
+            const toggleBtn = hikeHeader.querySelector('.toggle-btn');
+            const doneCheckbox = hikeHeader.querySelector('.done-checkbox');
+
+            // Set initial state of checkbox from localStorage
+            if (doneHikes[hike.name]) {
+                doneCheckbox.checked = true;
+            }
+
+            // Toggle details on header click
+            hikeHeader.addEventListener('click', (event) => {
+                // Prevent toggling when clicking the checkbox
+                if (event.target === doneCheckbox) {
+                    return;
+                }
+                hikeDetails.classList.toggle('expanded');
+                toggleBtn.textContent = hikeDetails.classList.contains('expanded') ? '-' : '+';
+            });
+
+            // Save state when checkbox changes
+            doneCheckbox.addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    doneHikes[hike.name] = true;
+                } else {
+                    delete doneHikes[hike.name];
+                }
+                saveDoneHikes(doneHikes);
+            });
+
+            // Add marker to map
+            const marker = L.marker([hike.latitude, hike.longitude]).addTo(map);
+
+            // Create popup content
+            const popupContent = `
+                <b>${hike.name}</b><br>
+                ${hike.shortDescription}<br>
+                ${hike.additionalInfo}
+            `;
+            marker.bindPopup(popupContent);
+
+            // When a marker is clicked, pan to it and open its popup
+            marker.on('click', function() {
+                map.setView(marker.getLatLng(), map.getZoom() < 8 ? 8 : map.getZoom()); // Zoom in if too far out
+                this.openPopup();
+            });
+        });
+
+        // Optional: Center map on first hike or all hikes bounding box
+        if (hikes.length > 0) {
+            const latLngs = hikes.map(h => [h.latitude, h.longitude]);
+            const bounds = L.latLngBounds(latLngs);
+            map.fitBounds(bounds, { padding: [50, 50] }); // Add some padding
+        }
+    </script>
+</body>
+</html>
