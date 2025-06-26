@@ -31,20 +31,12 @@ Welcome to the **India Hike Explorer**, your ultimate guide to the most breathta
 
 ---
 
-### 🚀 Getting Started
-
-To view this application, simply open the `hikes_in_india.html` file in your web browser.
-
-Alternatively, explore the live demo hosted on GitHub Pages:
-[Link to your GitHub Pages URL will go here, e.g., `https://yourusername.github.io/IndiaHikesApp/hikes_in_india.html`]
-
----
-
 ### 📸 Screenshot
 
 Here's a glimpse of the India Hike Explorer in action:
 
-![India Hike Explorer Screenshot](./Screenshot 2025-06-26 at 15.22.39.jpg)
+![India Hike Explorer Screenshot]<img width="1470" alt="Screenshot 2025-06-26 at 15 22 39" src="https://github.com/user-attachments/assets/7207c3cc-29db-4d50-93bd-df5b41c0ef08" />
+
 
 ---
 
